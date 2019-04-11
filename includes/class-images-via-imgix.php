@@ -116,12 +116,19 @@ class Images_Via_Imgix {
 	public function replace_image_url( $url ) {
 		if ( ! empty ( $this->options['cdn_link'] ) ) {
 			$parsed_url = parse_url( $url );
+			
+			/**
+			 * Modify which file extensions that should be used.
+			 *
+			 * @return array
+			 */
+			$extensions = apply_filters( 'imgix_file_extensions', ['jpg', 'jpeg', 'gif', 'png'] );
 
 			//Check if image is hosted on current site url -OR- the CDN url specified. Using strpos because we're comparing the host to a full CDN url.
 			if (
 				isset( $parsed_url['host'], $parsed_url['path'] )
 				&& ($parsed_url['host'] === parse_url( home_url( '/' ), PHP_URL_HOST ) || ( isset($this->options['external_cdn_link']) && ! empty($this->options['external_cdn_link']) && strpos( $this->options['external_cdn_link'], $parsed_url['host']) !== false ) )
-				&& preg_match( '/\.(jpg|jpeg|gif|png)$/i', $parsed_url['path'] )
+				&& preg_match( sprintf( '/\.(%s)$/i', implode( '|', $extensions ) ), $parsed_url['path'] )
 			) {
 				$cdn = parse_url( $this->options['cdn_link'] );
 
