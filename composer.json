@@ -1,5 +1,5 @@
 {
-  "name": "imgix-wordpress/images-via-imgix",
+  "name": "isotopsweden/images-via-imgix",
   "type": "wordpress-plugin",
   "license": "BSD-2-Clause",
   "description": "imgix WordPress plugin",
