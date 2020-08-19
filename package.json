@@ -9,6 +9,6 @@
   "author": "imgix",
   "license": "BSD-2",
   "dependencies": {
-    "grunt": "^0.4.5"
+    "grunt": "^1.3.0"
   }
 }
