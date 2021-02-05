@@ -7,7 +7,7 @@ class Images_Via_Imgix {
 	 *
 	 * @var Images_Via_Imgix
 	 */
-	protected static $instance;
+	protected static Images_Via_Imgix $instance;
 
 	/**
 	 * Plugin options
@@ -21,35 +21,14 @@ class Images_Via_Imgix {
 	 *
 	 * @var bool
 	 */
-	protected $buffer_started = false;
-
-	/**
-	 * ImagesViaImgix constructor.
-	 */
-	public function __construct() {
-		$this->options = get_option( 'imgix_settings', [] );
-
-		// Change filter load order to ensure it loads after other CDN url transformations i.e. Amazon S3 which loads at position 99.
-		add_filter( 'wp_get_attachment_url', [ $this, 'replace_image_url' ], 100 );
-		add_filter( 'imgix/add-image-url', [ $this, 'replace_image_url' ] );
-
-		add_filter( 'image_downsize', [ $this, 'image_downsize' ], 10, 3 );
-
-		add_filter( 'wp_calculate_image_srcset', [ $this, 'calculate_image_srcset' ], 10, 5 );
-
-		add_filter( 'the_content', [ $this, 'replace_images_in_content' ] );
-		add_action( 'wp_head', [ $this, 'prefetch_cdn' ], 1 );
-
-		add_action( 'after_setup_theme', [ $this, 'buffer_start_for_retina' ] );
-		add_action( 'shutdown', [ $this, 'buffer_end_for_retina' ], 0 );
-	}
+	protected bool $buffer_started = false;
 
 	/**
 	 * Plugin loader instance.
 	 *
 	 * @return Images_Via_Imgix
 	 */
-	public static function instance() {
+	public static function instance(): Images_Via_Imgix {
 		if ( ! isset( self::$instance ) ) {
 			self::$instance = new self;
 		}
@@ -58,23 +37,69 @@ class Images_Via_Imgix {
 	}
 
 	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		$this->options = get_option( 'imgix_settings', [] );
+
+		// Change filter load order to ensure it loads after other CDN url transformations i.e. Amazon S3 which loads at position 99.
+		add_filter( 'wp_get_attachment_url', [
+			$this,
+			'replace_image_url',
+		], 100 );
+		add_filter( 'imgix/add-image-url', [
+			$this,
+			'replace_image_url',
+		] );
+
+		add_filter( 'image_downsize', [
+			$this,
+			'image_downsize',
+		], 10, 3 );
+
+		add_filter( 'wp_calculate_image_srcset', [
+			$this,
+			'calculate_image_srcset',
+		], 10, 5 );
+
+		add_filter( 'the_content', [
+			$this,
+			'replace_images_in_content',
+		] );
+		add_action( 'wp_head', [
+			$this,
+			'prefetch_cdn',
+		], 1 );
+
+		add_action( 'after_setup_theme', [
+			$this,
+			'buffer_start_for_retina',
+		] );
+		add_action( 'shutdown', [
+			$this,
+			'buffer_end_for_retina',
+		], 0 );
+	}
+
+	/**
 	 * Set a single option.
 	 *
 	 * @param string $key
-	 * @param mixed $value
+	 * @param mixed  $value
 	 */
-	public function set_option( $key, $value ) {
+	public function set_option( string $key, $value ) {
 		$this->options[ $key ] = $value;
 	}
 
 	/**
 	 * Get a single option.
 	 *
-	 * @param  string $key
-	 * @param  mixed $default
+	 * @param string $key
+	 * @param mixed  $default
+	 *
 	 * @return mixed
 	 */
-	public function get_option( $key, $default = '' ) {
+	public function get_option( string $key, $default = '' ) {
 		return array_key_exists( $key, $this->options ) ? $this->options[ $key ] : $default;
 	}
 
@@ -84,7 +109,7 @@ class Images_Via_Imgix {
 	 *
 	 * @param array $options
 	 */
-	public function set_options( $options ) {
+	public function set_options( array $options ) {
 		$this->options = $options;
 	}
 
@@ -97,7 +122,7 @@ class Images_Via_Imgix {
 	 *
 	 * @return string Content with retina-enriched image tags.
 	 */
-	public function add_retina( $content ) {
+	public function add_retina( $content ): string {
 		$pattern = '/<img((?![^>]+srcset )([^>]*)';
 		$pattern .= 'src=[\'"]([^\'"]*imgix.net[^\'"]*\?[^\'"]*w=[^\'"]*)[\'"]([^>]*)*?)>/i';
 		$repl    = '<img$2src="$3" srcset="${3}, ${3}&amp;dpr=2 2x, ${3}&amp;dpr=3 3x,"$4>';
@@ -113,7 +138,7 @@ class Images_Via_Imgix {
 	 *
 	 * @return string
 	 */
-	public function replace_image_url( $url ) {
+	public function replace_image_url( string $url ): string {
 		if ( ! empty ( $this->options['cdn_link'] ) ) {
 			$parsed_url = parse_url( $url );
 
@@ -126,7 +151,12 @@ class Images_Via_Imgix {
 			 *
 			 * @return array
 			 */
-			$extensions = apply_filters( 'imgix_file_extensions', ['jpg', 'jpeg', 'gif', 'png'] );
+			$extensions = apply_filters( 'imgix_file_extensions', [
+				'jpg',
+				'jpeg',
+				'gif',
+				'png',
+			] );
 
 			//Check if image is hosted on current site url -OR- the CDN url specified. Using strpos because we're comparing the host to a full CDN url.
 			if (
@@ -136,7 +166,13 @@ class Images_Via_Imgix {
 			) {
 				$cdn = parse_url( $this->options['cdn_link'] );
 
-				foreach ( [ 'scheme', 'host', 'port' ] as $url_part ) {
+				foreach (
+					[
+						'scheme',
+						'host',
+						'port',
+					] as $url_part
+				) {
 					if ( isset( $cdn[ $url_part ] ) ) {
 						$parsed_url[ $url_part ] = $cdn[ $url_part ];
 					} else {
@@ -145,7 +181,7 @@ class Images_Via_Imgix {
 				}
 
 				if ( ! empty( $this->options['external_cdn_link'] ) ) {
-					$cdn_path = parse_url( $this->options['external_cdn_link'],  PHP_URL_PATH );
+					$cdn_path = parse_url( $this->options['external_cdn_link'], PHP_URL_PATH );
 
 					if ( isset( $cdn_path, $parsed_url['path'] ) && $cdn_path !== '/' && ! empty( $parsed_url['path'] ) ) {
 						$parsed_url['path'] = str_replace( $cdn_path, '', $parsed_url['path'] );
@@ -170,7 +206,7 @@ class Images_Via_Imgix {
 	 *
 	 * @return false|array
 	 */
-	public function image_downsize( $return, $attachment_id, $size ) {
+	public function image_downsize( $return, int $attachment_id, $size ) {
 		if ( ! empty ( $this->options['cdn_link'] ) ) {
 			$img_url = wp_get_attachment_url( $attachment_id );
 
@@ -182,8 +218,8 @@ class Images_Via_Imgix {
 				$available_sizes = $this->get_all_defined_sizes();
 				if ( isset( $available_sizes[ $size ] ) ) {
 					$size        = $available_sizes[ $size ];
-					$params['w'] = $width = $size['width'];
-					$params['h'] = $height = $size['height'];
+					$params['w'] = $width = $size['width'] ?? 0;
+					$params['h'] = $height = $size['height'] ?? 0;
 				}
 			}
 
@@ -193,17 +229,22 @@ class Images_Via_Imgix {
 
 			if ( ! isset( $width ) || ! isset( $height ) ) {
 				// any other type: use the real image
-				$meta   = wp_get_attachment_metadata( $attachment_id );
+				$meta = wp_get_attachment_metadata( $attachment_id );
 
 				// Image sizes is missing for pdf thumbnails
-				$meta['width']  = isset( $meta['width'] ) ? $meta['width'] : 0;
-				$meta['height'] = isset( $meta['height'] ) ? $meta['height'] : 0;
+				$meta['width']  = $meta['width'] ?? 0;
+				$meta['height'] = $meta['height'] ?? 0;
 
-				$width  = isset( $width ) ? $width : $meta['width'];
-				$height = isset( $height ) ? $height : $meta['height'];
+				$width  = $width ?? $meta['width'];
+				$height = $height ?? $meta['height'];
 			}
 
-			$return = [ $img_url, $width, $height, true ];
+			$return = [
+				$img_url,
+				$width,
+				$height,
+				true,
+			];
 		}
 
 		return $return;
@@ -220,7 +261,7 @@ class Images_Via_Imgix {
 	 *
 	 * @return array
 	 */
-	public function calculate_image_srcset( $sources, $size_array, $image_src, $image_meta, $attachment_id ) {
+	public function calculate_image_srcset( array $sources, array $size_array, string $image_src, array $image_meta, int $attachment_id ): array {
 		if ( ! empty ( $this->options['cdn_link'] ) ) {
 			foreach ( $sources as $i => $image_size ) {
 				if ( $image_size['descriptor'] === 'w' ) {
@@ -240,11 +281,11 @@ class Images_Via_Imgix {
 	/**
 	 * Modify image urls in content to use imgix host.
 	 *
-	 * @param $content
+	 * @param string $content
 	 *
 	 * @return string
 	 */
-	public function replace_images_in_content( $content ) {
+	public function replace_images_in_content( string $content ): string {
 		// Added null to apply filters wp_get_attachment_url to improve compatibility with https://en-gb.wordpress.org/plugins/amazon-s3-and-cloudfront/ - does not break wordpress if the plugin isn't present.
 		if ( ! empty ( $this->options['cdn_link'] ) ) {
 			if ( preg_match_all( '/<img\s[^>]*src=([\"\']??)([^\" >]*?)\1[^>]*>/iU', $content, $matches ) ) {
@@ -270,12 +311,13 @@ class Images_Via_Imgix {
 				}
 			}
 
-      if ( preg_match_all( '/url\(([\s])?([\"|\'])?(.*?)([\"|\'])?([\s])?\)/i', $content, $matches ) ) {
-        foreach ( $matches[3] as $image_src ) {
-          $content = str_replace( $image_src, apply_filters( 'wp_get_attachment_url', $image_src, null ), $content );
-        }
-      }
+			if ( preg_match_all( '/url\(([\s])?([\"|\'])?(.*?)([\"|\'])?([\s])?\)/i', $content, $matches ) ) {
+				foreach ( $matches[3] as $image_src ) {
+					$content = str_replace( $image_src, apply_filters( 'wp_get_attachment_url', $image_src, null ), $content );
+				}
+			}
 		}
+
 		return $content;
 	}
 
@@ -298,7 +340,10 @@ class Images_Via_Imgix {
 	 */
 	public function buffer_start_for_retina() {
 		if ( ! empty ( $this->options['add_dpi2_srcset'] ) ) {
-			$this->buffer_started = ob_start( [ $this, 'add_retina' ] );
+			$this->buffer_started = ob_start( [
+				$this,
+				'add_retina',
+			] );
 		}
 	}
 
@@ -317,7 +362,7 @@ class Images_Via_Imgix {
 	 *
 	 * @return array Global parameters to be appened at the end of each img URL.
 	 */
-	protected function get_global_params() {
+	protected function get_global_params(): array {
 		$params = [];
 
 		// For now, only "auto" is supported.
@@ -346,13 +391,17 @@ class Images_Via_Imgix {
 	 *
 	 * @return array
 	 */
-	protected function get_all_defined_sizes() {
+	protected function get_all_defined_sizes(): array {
 		// Make thumbnails and other intermediate sizes.
 		$theme_image_sizes = wp_get_additional_image_sizes();
 
 		$sizes = [];
 		foreach ( get_intermediate_image_sizes() as $s ) {
-			$sizes[ $s ] = [ 'width' => '', 'height' => '', 'crop' => false ];
+			$sizes[ $s ] = [
+				'width'  => '',
+				'height' => '',
+				'crop'   => false,
+			];
 			if ( isset( $theme_image_sizes[ $s ] ) ) {
 				// For theme-added sizes
 				$sizes[ $s ]['width']  = intval( $theme_image_sizes[ $s ]['width'] );

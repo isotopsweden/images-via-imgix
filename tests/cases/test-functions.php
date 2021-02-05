@@ -29,7 +29,7 @@ class DoFunctionsTest extends WP_UnitTestCase {
 	public function setUp() {
 		parent::setUp();
 
-		$filename = ( DIR_TESTDATA . '/images/test-image-large.png' );
+		$filename = ( DIR_TESTDATA . '/images/test-image-large.jpg' );
 		$contents = file_get_contents( $filename );
 
 		$upload = wp_upload_bits( basename( $filename ), null, $contents );
